@@ -67,9 +67,8 @@ def run_smoke():
                 other_draft = created.json()
 
             sub1 = client.get("/api/subscriptions/SUB-0001", headers=admin_headers).json()
-            for status in ("Quotation", "Confirmed", "Active"):
-                if sub1["status"] == status:
-                    continue
+            sequence = ("Draft", "Quotation", "Confirmed", "Active")
+            for status in sequence[sequence.index(sub1["status"]) + 1:]:
                 response = client.patch(f"/api/subscriptions/{sub1['id']}/status", headers=admin_headers, json={"status": status})
                 assert response.status_code == 200, response.text
                 sub1 = response.json()
