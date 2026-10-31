@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from database.collections import ai_logs_collection
+from backend.database.collections import ai_logs_collection
 
 
 def log_ai_interaction(intent, payload, response, status, error=None):

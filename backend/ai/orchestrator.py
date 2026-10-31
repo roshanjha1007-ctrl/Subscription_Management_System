@@ -5,6 +5,8 @@ from .agents import (
     finance_summary_agent,
     finance_outstanding_agent,
     finance_overdue_agent,
+    list_subscriptions_tool,
+    get_subscription_tool,
 )
 
 
@@ -66,3 +68,5 @@ orchestrator = AIOrchestrator()
 orchestrator.register_agent("finance_summary", finance_summary_agent)
 orchestrator.register_agent("finance_outstanding", finance_outstanding_agent)
 orchestrator.register_agent("finance_overdue", finance_overdue_agent)
+orchestrator.register_agent("list_subscriptions", list_subscriptions_tool)
+orchestrator.register_agent("get_subscription", get_subscription_tool)
