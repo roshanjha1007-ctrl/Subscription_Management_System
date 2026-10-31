@@ -1,4 +1,4 @@
-from database.connection import db
+from backend.database.connection import db
 
 users_collection = db["users"]
 products_collection = db["products"]

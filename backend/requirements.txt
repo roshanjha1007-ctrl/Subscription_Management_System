@@ -1,2 +1,6 @@
 pymongo
 python-dotenv
+httpx
+fastapi
+uvicorn[standard]
+bcrypt
