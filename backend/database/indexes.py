@@ -1,7 +1,5 @@
 from backend.database.collections import (
     users_collection,
-    products_collection,
-    plans_collection,
     subscriptions_collection,
 )
 

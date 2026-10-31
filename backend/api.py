@@ -1,4 +1,5 @@
 import re
+import math
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -28,6 +29,17 @@ def user_response(user):
 
 def clean_payload(payload, allowed):
     return {key: value for key, value in payload.items() if key in allowed}
+
+
+def valid_variants(value):
+    return isinstance(value, list) and all(
+        isinstance(item, dict) and isinstance(item.get("attribute"), str) and item["attribute"]
+        and isinstance(item.get("value"), str) and item["value"]
+        and isinstance(item.get("extraPrice", 0), (int, float))
+        and not isinstance(item.get("extraPrice", 0), bool)
+        and math.isfinite(item.get("extraPrice", 0)) and item.get("extraPrice", 0) >= 0
+        for item in value
+    )
 
 
 @router.post("/auth/register", status_code=201)
@@ -87,10 +99,10 @@ def create_product(payload: dict, admin=Depends(require_role("admin"))):
         raise HTTPException(400, "name is required")
     for field in ("salesPrice", "costPrice"):
         value = data.get(field)
-        if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
             raise HTTPException(400, f"{field} must be a non-negative number")
     variants = data.get("variants", [])
-    if not isinstance(variants, list) or any(not isinstance(v, dict) or not v.get("attribute") or not v.get("value") or isinstance(v.get("extraPrice", 0), bool) or not isinstance(v.get("extraPrice", 0), (int, float)) or v.get("extraPrice", 0) < 0 for v in variants):
+    if not valid_variants(variants):
         raise HTTPException(400, "variants must contain attribute, value, and non-negative extraPrice")
     data.update({"name": data["name"].strip(), "active": True, "createdAt": datetime.now(timezone.utc)})
     result = products_collection.insert_one(data)
@@ -117,8 +129,10 @@ def update_product(product_id: str, payload: dict, admin=Depends(require_role("a
     if "name" in data and (not isinstance(data["name"], str) or not data["name"].strip()):
         raise HTTPException(400, "name cannot be empty")
     for field in ("salesPrice", "costPrice"):
-        if field in data and (isinstance(data[field], bool) or not isinstance(data[field], (int, float)) or data[field] < 0):
+        if field in data and (isinstance(data[field], bool) or not isinstance(data[field], (int, float)) or not math.isfinite(data[field]) or data[field] < 0):
             raise HTTPException(400, f"{field} must be a non-negative number")
+    if "variants" in data and not valid_variants(data["variants"]):
+        raise HTTPException(400, "variants must contain attribute, value, and non-negative extraPrice")
     result = products_collection.find_one_and_update({"_id": object_id(product_id)}, {"$set": data}, return_document=True)
     if not result:
         raise HTTPException(404, "Product not found")
@@ -186,10 +200,10 @@ def validate_plan(data):
         raise HTTPException(400, "name is required")
     if data.get("billingPeriod") not in {"daily", "weekly", "monthly", "yearly"}:
         raise HTTPException(400, "billingPeriod must be daily, weekly, monthly, or yearly")
-    if isinstance(data.get("price"), bool) or not isinstance(data.get("price"), (int, float)) or data["price"] < 0:
+    if isinstance(data.get("price"), bool) or not isinstance(data.get("price"), (int, float)) or not math.isfinite(data["price"]) or data["price"] < 0:
         raise HTTPException(400, "price must be a non-negative number")
     quantity = data.get("minQuantity", 1)
-    if isinstance(quantity, bool) or not isinstance(quantity, (int, float)) or quantity <= 0:
+    if isinstance(quantity, bool) or not isinstance(quantity, (int, float)) or not math.isfinite(quantity) or quantity <= 0:
         raise HTTPException(400, "minQuantity must be a positive number")
     data.setdefault("minQuantity", 1)
     for flag in ("autoClose", "closable", "pausable", "renewable"):

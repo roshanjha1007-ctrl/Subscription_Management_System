@@ -63,6 +63,8 @@ python -m backend.seed
 uvicorn backend.main:app --reload
 ```
 
+Run the backend checks in PowerShell with `$env:PYTHONPATH = "backend"` then `python -m unittest backend.tests.test_core backend.ai.tests.test_orchestrator backend.ai.tests.test_finance_agent`. For a real seeded demo pass against local MongoDB, run `python -m backend.tests.live_smoke`; it starts and stops a local API process and advances seeded `SUB-0001` to `Active`.
+
 The API is available at `http://127.0.0.1:8000`; `/health` is a database-independent health check. Seed accounts use `SEED_DEMO_PASSWORD` from `backend/.env`; the default seeded emails are `admin@example.com`, `staff@example.com`, `customer1@example.com`, and `customer2@example.com`.
 
 ### API contract

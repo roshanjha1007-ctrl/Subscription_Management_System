@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import math
 
 from bson import ObjectId
 from fastapi import HTTPException
@@ -47,11 +48,16 @@ def paged(collection, query, page, limit):
 def get_variant_price(product, variant=None):
     extra_price = 0
     if variant:
+        if not isinstance(variant, dict):
+            raise HTTPException(400, "variant must include an attribute and value")
         match = next((item for item in product.get("variants", []) if item.get("attribute") == variant.get("attribute") and item.get("value") == variant.get("value")), None)
         if not match:
             raise HTTPException(400, "Variant is not available for this product")
         extra_price = match.get("extraPrice", 0)
-    return product["salesPrice"] + extra_price
+    price = product["salesPrice"] + extra_price
+    if not math.isfinite(price):
+        raise HTTPException(400, "Variant price is outside the supported range")
+    return price
 
 
 def subscription_filter(user, filters=None):
@@ -96,16 +102,22 @@ def create_subscription(data, user):
     normalized = []
     for line in lines:
         quantity = line.get("quantity")
-        if isinstance(quantity, bool) or not isinstance(quantity, (int, float)) or quantity <= 0:
+        if isinstance(quantity, bool) or not isinstance(quantity, (int, float)) or not math.isfinite(quantity) or quantity <= 0:
             raise HTTPException(400, "Line quantity must be a positive number")
+        tax = line.get("tax", 0)
+        if isinstance(tax, bool) or not isinstance(tax, (int, float)) or not math.isfinite(tax) or tax < 0:
+            raise HTTPException(400, "Line tax must be a non-negative number")
         product = products_collection.find_one({"_id": object_id(line.get("productId")), "active": {"$ne": False}})
         if not product:
             raise HTTPException(404, "Product not found")
         unit_price = get_variant_price(product, line.get("variant"))
+        amount = quantity * unit_price
+        if not math.isfinite(amount):
+            raise HTTPException(400, "Line amount is outside the supported range")
         normalized.append({
             "productId": str(product["_id"]), "variant": line.get("variant"),
             "quantity": quantity, "unitPrice": unit_price,
-            "tax": line.get("tax", 0), "amount": quantity * unit_price,
+            "tax": tax, "amount": amount,
         })
     customer_id = data.get("customerId") or user["id"]
     if user["role"] == "customer" and customer_id != user["id"]:

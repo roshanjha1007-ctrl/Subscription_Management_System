@@ -12,6 +12,8 @@ from fastapi import Depends, Header, HTTPException
 
 
 def validate_password(password):
+    if isinstance(password, str) and len(password.encode()) > 72:
+        raise HTTPException(400, "Password must not exceed 72 bytes")
     if not isinstance(password, str) or not re.fullmatch(
         r"(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{9,}", password
     ):
