@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from app.config import settings
 from app.database import connect_to_mongodb, close_mongodb_connection
 from app.routes.finance_routes import router as finance_router
-
+from app.routes.invoice_routes import router as invoice_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -30,6 +30,7 @@ app = FastAPI(
 
 # Register Finance API routes.
 app.include_router(finance_router)
+app.include_router(invoice_router)
 
 
 @app.get("/")
